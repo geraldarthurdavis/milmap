@@ -19,3 +19,5 @@ data/boundaries/
 !data/fixtures/
 playwright-report/
 test-results/
+
+.claude/
