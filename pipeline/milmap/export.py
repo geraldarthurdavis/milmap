@@ -63,6 +63,65 @@ class BuildInput:
     synthetic: bool = False
 
 
+# Real (non-synthetic) source metadata, keyed by the source_id adapters emit.
+# Primary ordering (sources[0] drives the gain/loss histogram) is decided in
+# build_input_from_db, not here.
+KNOWN_SOURCES: dict[str, Source] = {
+    "isw": Source(
+        id="isw",
+        name="Institute for the Study of War",
+        kind="analytic",
+        side="unknown",
+        reliability="B",
+        url="https://understandingwar.org",
+        license_note="© ISW & AEI Critical Threats Project — derived control layers; see docs/LICENSING.md",
+    ),
+    "deepstate": Source(
+        id="deepstate",
+        name="DeepState",
+        kind="osint_map",
+        side="UA",
+        reliability="B",
+        url="https://deepstatemap.live",
+        license_note="© DeepState — see docs/LICENSING.md",
+    ),
+}
+
+# Histogram/primary preference when several control sources are present.
+_SOURCE_PRIORITY = ("isw", "deepstate")
+
+
+def build_input_from_db(con, mask: BaseGeometry, *, synthetic: bool = False) -> BuildInput:
+    """Assemble a BuildInput from the DuckDB warehouse (control_snapshot).
+
+    `con` is a db.connect() connection; `mask` is the Ukraine adm0 *boundary*
+    (borders + coast) used to clip international edges off the derived fronts.
+    """
+    from .db import load_control_areas
+
+    areas = load_control_areas(con)
+    if not areas:
+        raise ValueError("control_snapshot is empty — run `milmap ingest isw-map` first")
+    present = {src for (src, _cat) in areas}
+    ordered = [s for s in _SOURCE_PRIORITY if s in present] + sorted(
+        s for s in present if s not in _SOURCE_PRIORITY
+    )
+    sources = [
+        KNOWN_SOURCES.get(sid)
+        or Source(
+            id=sid,
+            name=sid,
+            kind="osint_map",
+            side="unknown",
+            reliability="F",
+            url="",
+            license_note="unregistered source",
+        )
+        for sid in ordered
+    ]
+    return BuildInput(sources=sources, areas=areas, mask=mask, synthetic=synthetic)
+
+
 def build(inp: BuildInput, out: Path, *, temporal: bool = False) -> Manifest:
     days_dir = out / "days"
     days_dir.mkdir(parents=True, exist_ok=True)

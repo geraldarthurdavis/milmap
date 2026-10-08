@@ -12,12 +12,13 @@
   milmap schema  --out ../packages/schema/schema
   milmap daily                          ingest(all) -> extract -> fuse -> export for [today-3, today]
 
-Dates accept YYYY-MM-DD or day index. Implemented here: isw-discover, schema.
-The rest are wired in PROMPT.md's build plan.
+Dates accept YYYY-MM-DD or day index. Implemented here: isw-discover, schema,
+ingest isw-map, export. The rest are wired in PROMPT.md's build plan.
 """
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from pathlib import Path
 
@@ -25,9 +26,20 @@ import orjson
 import typer
 
 from .models import EXPORT_MODELS
-from .timeutil import day_index
+from .timeutil import day_index, day_to_date
+
+# Repo root (milmap/ -> pipeline/ -> repo). Anchor all I/O here so outputs land in
+# the repo-root data/ dir — matching .gitignore and the Vite dev server's DATA_DIR —
+# regardless of the CWD the command is run from (commands run from pipeline/).
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = REPO_ROOT / "data"
+os.environ.setdefault("MILMAP_RAW_DIR", str(DATA_DIR / "raw"))
+os.environ.setdefault("MILMAP_DB", str(DATA_DIR / "milmap.duckdb"))
+DEFAULT_MASK = DATA_DIR / "fixtures" / "ukraine_adm0.geojson"
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
+ingest_app = typer.Typer(no_args_is_help=True, help="Fetch + normalize sources into the warehouse")
+app.add_typer(ingest_app, name="ingest")
 
 
 def parse_day(s: str) -> int:
@@ -70,6 +82,64 @@ def _drop_titles_deep(node) -> None:
     elif isinstance(node, list):
         for v in node:
             _drop_titles_deep(v)
+
+
+@ingest_app.command("isw-map")
+def ingest_isw_map(
+    from_: str = typer.Option(..., "--from", help="First day (YYYY-MM-DD or day index)"),
+    to: str = typer.Option(..., "--to", help="Last day (YYYY-MM-DD or day index)"),
+) -> None:
+    """Fetch ISW ArcGIS control-of-terrain for a day range into control_snapshot."""
+    from .db import connect, store_snapshot
+    from .geo.diff import area_km2
+    from .sources.isw_arcgis import IswArcgisSource
+
+    d0, d1 = parse_day(from_), parse_day(to)
+    con = connect()
+    try:
+        n = 0
+        for snap in IswArcgisSource().snapshots(d0, d1):
+            km2 = area_km2(snap.geometry)
+            store_snapshot(
+                con,
+                source_id=snap.source_id,
+                category=snap.category,
+                day=snap.day,
+                geom=snap.geometry,
+                area_km2=km2,
+                meta=snap.meta,
+            )
+            n += 1
+            typer.echo(f"  {snap.category:24s} {day_to_date(snap.day)}  {km2:10.1f} km2")
+        typer.echo(f"ingested {n} control snapshots for days {d0}..{d1}")
+    finally:
+        con.close()
+
+
+@app.command()
+def export(
+    out: Path = typer.Option(DATA_DIR / "build", help="Output dir (manifest.json + days/)"),
+    temporal: bool = typer.Option(False, help="Also write temporal/*.geojsonl for tippecanoe"),
+    mask: Path = typer.Option(DEFAULT_MASK, help="Ukraine adm0 GeoJSON used as the front mask"),
+) -> None:
+    """Build the static web bundle from the warehouse (control_snapshot)."""
+    import json
+
+    from shapely.geometry import shape
+
+    from .db import connect
+    from .export import build, build_input_from_db
+
+    ukr = shape(json.loads(mask.read_text())["features"][0]["geometry"])
+    con = connect()
+    try:
+        inp = build_input_from_db(con, ukr.boundary)
+    finally:
+        con.close()
+    m = build(inp, out, temporal=temporal)
+    typer.echo(
+        f"wrote {out}: days {m.day_min}-{m.day_max}, {len(m.layers)} layers, synthetic={m.synthetic}"
+    )
 
 
 @app.command("isw-discover")

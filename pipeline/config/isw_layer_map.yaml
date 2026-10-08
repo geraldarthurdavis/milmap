@@ -29,7 +29,7 @@ time_field: datetime
 layer_rules:
   - match: '(?i)before.?february.?24|pre.?2022'
     category: pre_2022
-  - match: '(?i)infiltr'
+  - match: '(?i)infiltr|infil_'
     category: assessed_infiltration
   - match: '(?i)claimed.?ukrainian.?counte|ua.?co|counter'
     category: claimed_ua_counter
@@ -37,7 +37,7 @@ layer_rules:
     category: claimed_control
   - match: '(?i)assessed.?russian.?advance|advance|adv_'
     category: assessed_advance
-  - match: '(?i)controlmap|control|cot_|assessed.?russian.?control'
+  - match: '(?i)controlmap|control|cot|assessed.?russian.?control'
     category: assessed_control
   - match: '(?i)partisan'
     category: null   # point/area events; ingest later as observations

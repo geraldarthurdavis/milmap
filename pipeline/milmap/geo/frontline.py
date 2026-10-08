@@ -30,6 +30,21 @@ def geodesic_length_m(line: BaseGeometry) -> float:
     return float(WGS84.geometry_length(line))
 
 
+def _polygonal(g: BaseGeometry) -> BaseGeometry:
+    """Keep only the (multi)polygon part of `g`.
+
+    make_valid() on real-world control unions can return a GeometryCollection
+    carrying stray lines/points; shapely's `.boundary` is None for a collection,
+    so the front derivation must drop the non-areal bits first.
+    """
+    from shapely.geometry import MultiPolygon, Polygon
+
+    if isinstance(g, Polygon | MultiPolygon):
+        return g
+    parts = [p for p in getattr(g, "geoms", []) if isinstance(p, Polygon | MultiPolygon)]
+    return shapely.union_all(parts) if parts else MultiPolygon()
+
+
 def _as_lines(g: BaseGeometry) -> list[LineString]:
     if g.is_empty:
         return []
@@ -82,7 +97,9 @@ def front_lines(
     """
     if area.is_empty:
         return []
-    area = shapely.make_valid(area)
+    area = _polygonal(shapely.make_valid(area))
+    if area.is_empty:
+        return []
     boundary = area.boundary
     front = boundary.difference(mask.buffer(mask_tol_deg))
     merged = linemerge(_as_lines(front)) if not front.is_empty else front

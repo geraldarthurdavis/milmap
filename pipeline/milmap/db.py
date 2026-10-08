@@ -7,10 +7,14 @@ be rerun for a day range.
 
 from __future__ import annotations
 
+import json
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import duckdb
+import shapely
+from shapely.geometry.base import BaseGeometry
 
 DB_PATH = Path(os.environ.get("MILMAP_DB", "data/milmap.duckdb"))
 
@@ -43,3 +47,41 @@ def connect(path: Path = DB_PATH) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(str(path))
     con.execute(DDL)
     return con
+
+
+# ---------------------------------------------------------------- control_snapshot I/O
+
+
+def store_snapshot(
+    con: duckdb.DuckDBPyConnection,
+    *,
+    source_id: str,
+    category: str,
+    day: int,
+    geom: BaseGeometry,
+    area_km2: float,
+    meta: dict | None = None,
+) -> None:
+    """Upsert one area layer for one day. Idempotent on (source_id, category, day),
+    so any day range can be re-ingested without duplicating rows."""
+    con.execute(
+        "INSERT OR REPLACE INTO control_snapshot "
+        "(source_id, category, day, geom_wkb, area_km2, meta) "
+        "VALUES (?, ?, ?, ?, ?, CAST(? AS JSON))",
+        [source_id, category, int(day), shapely.to_wkb(geom), float(area_km2), json.dumps(meta or {})],
+    )
+
+
+def load_control_areas(
+    con: duckdb.DuckDBPyConnection,
+) -> dict[tuple[str, str], dict[int, BaseGeometry]]:
+    """Read the warehouse back into the shape export.BuildInput expects:
+    (source_id, category) -> {day: geometry}."""
+    rows = con.execute(
+        "SELECT source_id, category, day, geom_wkb FROM control_snapshot "
+        "ORDER BY source_id, category, day"
+    ).fetchall()
+    areas: dict[tuple[str, str], dict[int, BaseGeometry]] = defaultdict(dict)
+    for src, cat, day, wkb in rows:
+        areas[(src, cat)][int(day)] = shapely.from_wkb(bytes(wkb))
+    return dict(areas)
