@@ -1,0 +1,19 @@
+# Source registry -> models.Source. Exported in manifest.json and shown in the
+# attribution panel. Telegram channels are appended from telegram_channels.yaml.
+sources:
+  - id: isw
+    name: Institute for the Study of War / AEI Critical Threats
+    kind: analytic
+    side: unknown
+    reliability: B
+    url: https://understandingwar.org
+    language: en
+    license_note: "© ISW & AEI CTP. Personal/research use; obtain permission before public redistribution of map layers."
+  - id: deepstate
+    name: DeepStateMap (via cyterat/deepstate-map-data)
+    kind: osint_map
+    side: UA
+    reliability: B
+    url: https://deepstatemap.live
+    language: uk
+    license_note: "Data © DeepState; mirror repo GPL-3.0. Check DeepState terms before public use."

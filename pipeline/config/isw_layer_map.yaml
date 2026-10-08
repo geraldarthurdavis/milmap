@@ -1,0 +1,43 @@
+# ISW publishes control-of-terrain as ArcGIS Online hosted FeatureServers under
+#   https://services5.arcgis.com/SaBe5HMtmnbqSWlu/ArcGIS/rest/services
+# (copyright text on layers: "Institute for the Study of War and American
+#  Enterprise Institute's Critical Threats Project").
+#
+# Naming is hand-made and drifts over time, so we classify *layer names* by regex,
+# first match wins. Verified 2026-10-07 against e.g. Ukraine_Timelapse_April_2026_WFL1:
+#   33 UkraineControlMapAO30A_Merge_APR      -> assessed_control
+#   62 AssessedRussianAdvance_Merge_APR      -> assessed_advance
+#   64 AssessedRussianInfiltr_Merge_APR      -> assessed_infiltration
+#   30 ClaimedRussianTerritor_Merge_APR      -> claimed_control
+#   31 ClaimedUkrainianCounte_Merge_APR      -> claimed_ua_counter
+# Timelapse layers carry a `datetime` (epoch ms, UTC) per daily polygon.
+#
+# Run `milmap isw-discover` to print services/layers and how each classifies;
+# unclassified Ukraine-looking layers are logged as warnings — update this file.
+
+base_url: https://services5.arcgis.com/SaBe5HMtmnbqSWlu/ArcGIS/rest/services
+
+# Services worth scanning for *daily history*. Everything else is ignored.
+service_include:
+  - '(?i)timelapse'
+  - '(?i)_merge_.*20\d\d'
+service_exclude:
+  - '(?i)israel|idf|iran|syria|lebanon|taliban|gaza'
+
+time_field: datetime
+
+layer_rules:
+  - match: '(?i)before.?february.?24|pre.?2022'
+    category: pre_2022
+  - match: '(?i)infiltr'
+    category: assessed_infiltration
+  - match: '(?i)claimed.?ukrainian.?counte|ua.?co|counter'
+    category: claimed_ua_counter
+  - match: '(?i)claimed.?russian|russian.?claimed|claim'
+    category: claimed_control
+  - match: '(?i)assessed.?russian.?advance|advance|adv_'
+    category: assessed_advance
+  - match: '(?i)controlmap|control|cot_|assessed.?russian.?control'
+    category: assessed_control
+  - match: '(?i)partisan'
+    category: null   # point/area events; ingest later as observations

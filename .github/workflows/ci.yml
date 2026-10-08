@@ -1,0 +1,32 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: pipeline } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv run ruff check . ../scripts
+      - run: uv run pytest -q
+      - name: Contract is up to date
+        run: |
+          uv run milmap schema --out ../packages/schema/schema
+          git diff --exit-code ../packages/schema/schema
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @milmap/schema gen && git diff --exit-code packages/schema/src/generated.ts
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

@@ -1,0 +1,12 @@
+# Public channels to ingest. `reliability` is the Admiralty source grade (A-F) the
+# fusion step applies to every claim from the channel; `side` drives colour and
+# whether a claim counts as corroboration for the other side.
+#
+# Curate deliberately: these are *claims*, frequently propaganda. Keep the list
+# short at first and review grades monthly. Handles below are placeholders —
+# fill in after vetting; the pipeline skips entries whose handle starts with '#'.
+channels:
+  - { handle: "#ru_milblogger_1", side: RU, reliability: D, language: ru, kind: milblog }
+  - { handle: "#ru_milblogger_2", side: RU, reliability: D, language: ru, kind: milblog }
+  - { handle: "#ua_general_staff", side: UA, reliability: C, language: uk, kind: official }
+  - { handle: "#ua_osint_map", side: UA, reliability: B, language: uk, kind: osint_map }

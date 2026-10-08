@@ -1,0 +1,267 @@
+{
+  "$defs": {
+    "Actor": {
+      "enum": [
+        "RU",
+        "UA",
+        "unknown"
+      ],
+      "title": "Actor",
+      "type": "string"
+    },
+    "DayStat": {
+      "additionalProperties": false,
+      "properties": {
+        "day": {
+          "type": "integer"
+        },
+        "ru_gain_km2": {
+          "default": 0.0,
+          "type": "number"
+        },
+        "ua_gain_km2": {
+          "default": 0.0,
+          "type": "number"
+        },
+        "observations": {
+          "default": 0,
+          "type": "integer"
+        },
+        "claims": {
+          "default": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "day",
+        "ru_gain_km2",
+        "ua_gain_km2",
+        "observations",
+        "claims"
+      ],
+      "title": "DayStat",
+      "type": "object"
+    },
+    "LayerDescriptor": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "e.g. 'isw.assessed_control', 'deepstate.front'",
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "geom": {
+          "enum": [
+            "area",
+            "line",
+            "point"
+          ],
+          "type": "string"
+        },
+        "category": {
+          "description": "ControlCategory / LineKind / 'observations'",
+          "type": "string"
+        },
+        "format": {
+          "$ref": "#/$defs/LayerFormat",
+          "default": "bundle"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "For temporal_pmtiles: archive URL"
+        },
+        "source_layer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "day_ranges": {
+          "description": "Inclusive [from, to] day ranges with data",
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "source_id",
+        "geom",
+        "category",
+        "format",
+        "url",
+        "source_layer",
+        "day_ranges"
+      ],
+      "title": "LayerDescriptor",
+      "type": "object"
+    },
+    "LayerFormat": {
+      "enum": [
+        "bundle",
+        "temporal_pmtiles"
+      ],
+      "title": "LayerFormat",
+      "type": "string"
+    },
+    "Reliability": {
+      "description": "NATO/Admiralty source-reliability grade (AJP-2.1). Assigned per *source*.",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "title": "Reliability",
+      "type": "string"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable slug, e.g. 'isw', 'deepstate', 'tg:rybar'",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "side": {
+          "$ref": "#/$defs/Actor",
+          "description": "Which side the source is aligned with (unknown = neutral)"
+        },
+        "reliability": {
+          "$ref": "#/$defs/Reliability"
+        },
+        "url": {
+          "type": "string"
+        },
+        "language": {
+          "default": "en",
+          "type": "string"
+        },
+        "license_note": {
+          "description": "Terms the data is used under; shown in attribution",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "side",
+        "reliability",
+        "url",
+        "language",
+        "license_note"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "SourceKind": {
+      "enum": [
+        "analytic",
+        "osint_map",
+        "milblog",
+        "official",
+        "telegram",
+        "news"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "type": "integer"
+    },
+    "epoch": {
+      "default": "2022-02-24",
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "synthetic": {
+      "default": false,
+      "description": "True for demo fixtures; UI shows a banner",
+      "type": "boolean"
+    },
+    "day_min": {
+      "type": "integer"
+    },
+    "day_max": {
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Source"
+      },
+      "type": "array"
+    },
+    "layers": {
+      "items": {
+        "$ref": "#/$defs/LayerDescriptor"
+      },
+      "type": "array"
+    },
+    "stats": {
+      "description": "One entry per day in [day_min, day_max]",
+      "items": {
+        "$ref": "#/$defs/DayStat"
+      },
+      "type": "array"
+    },
+    "bundle_url_template": {
+      "default": "days/{date}.json",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "epoch",
+    "generated_at",
+    "synthetic",
+    "day_min",
+    "day_max",
+    "sources",
+    "layers",
+    "stats",
+    "bundle_url_template"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

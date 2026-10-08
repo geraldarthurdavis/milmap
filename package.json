@@ -1,0 +1,15 @@
+{
+  "name": "milmap",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @milmap/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "schema:gen": "cd pipeline && uv run milmap schema --out ../packages/schema/schema && pnpm --filter @milmap/schema gen",
+    "fixtures": "cd pipeline && uv run python ../scripts/make_fixtures.py --out ../data/build"
+  }
+}

@@ -1,0 +1,32 @@
+name: daily
+# ISW publishes late evening ET; the DeepState mirror updates ~03:00 UTC.
+on:
+  schedule:
+    - cron: "30 3 * * *"
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      from: { description: "First day (YYYY-MM-DD)", required: false }
+      to: { description: "Last day (YYYY-MM-DD)", required: false }
+
+concurrency: { group: daily, cancel-in-progress: false }
+
+jobs:
+  build-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+      TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+      MILMAP_CONTACT: ${{ vars.MILMAP_CONTACT }}
+    defaults: { run: { working-directory: pipeline } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      # The DuckDB warehouse + raw cache persist between runs as an artifact/R2 object
+      # (restore step goes here). Telegram session: decode secrets.TELEGRAM_SESSION_B64.
+      - run: uv run milmap daily ${{ inputs.from && format('--from {0}', inputs.from) || '' }} ${{ inputs.to && format('--to {0}', inputs.to) || '' }}
+      # Publish: changed day bundles first, manifest.json LAST (readers never see a manifest
+      # pointing at missing days). e.g. rclone/wrangler to R2 with long cache on days/*.

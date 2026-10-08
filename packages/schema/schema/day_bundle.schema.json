@@ -1,0 +1,398 @@
+{
+  "$defs": {
+    "Actor": {
+      "enum": [
+        "RU",
+        "UA",
+        "unknown"
+      ],
+      "title": "Actor",
+      "type": "string"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "<=25 words verbatim; never republish full text"
+        }
+      },
+      "required": [
+        "source_id",
+        "url",
+        "published_at",
+        "excerpt"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Feature": {
+      "additionalProperties": false,
+      "description": "Loose GeoJSON Feature (geometry left untyped to keep the TS side simple).",
+      "properties": {
+        "type": {
+          "const": "Feature",
+          "default": "Feature",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "geometry": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "geometry",
+        "properties"
+      ],
+      "title": "Feature",
+      "type": "object"
+    },
+    "FeatureCollection": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "FeatureCollection",
+          "default": "FeatureCollection",
+          "type": "string"
+        },
+        "features": {
+          "items": {
+            "$ref": "#/$defs/Feature"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "features"
+      ],
+      "title": "FeatureCollection",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "sha1 of (source_id, document_id, ordinal)",
+          "type": "string"
+        },
+        "day": {
+          "type": "integer"
+        },
+        "date": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ObservationKind"
+        },
+        "actor": {
+          "$ref": "#/$defs/Actor"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "place": {
+          "$ref": "#/$defs/PlaceRef"
+        },
+        "geometry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PointGeometry"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Resolved anchor point"
+        },
+        "front_anchor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PointGeometry"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nearest point on that day's front line (for callout leader lines)"
+        },
+        "axis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Operational direction, e.g. 'Pokrovsk direction'"
+        },
+        "units": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "description": "Our own paraphrase, English",
+          "maxLength": 280,
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "type": "array"
+        },
+        "credibility": {
+          "default": 6,
+          "description": "Admiralty information credibility 1..6",
+          "maximum": 6,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "cluster_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fusion cluster (same place/day/kind)"
+        },
+        "corroboration": {
+          "default": 1,
+          "description": "Independent sources in the cluster",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "conflicts_with_assessment": {
+          "default": false,
+          "description": "Claim lies outside the assessed-control area for the day",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "day",
+        "date",
+        "source_id",
+        "kind",
+        "actor",
+        "status",
+        "place",
+        "geometry",
+        "front_anchor",
+        "axis",
+        "units",
+        "summary",
+        "citations",
+        "credibility",
+        "cluster_id",
+        "corroboration",
+        "conflicts_with_assessment"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "ObservationKind": {
+      "enum": [
+        "advance",
+        "withdrawal",
+        "seizure",
+        "infiltration",
+        "assault",
+        "counterattack",
+        "strike",
+        "unit_presence",
+        "other"
+      ],
+      "title": "ObservationKind",
+      "type": "string"
+    },
+    "PlaceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Name as written in the source",
+          "type": "string"
+        },
+        "gazetteer_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'geonames:704508'"
+        },
+        "canonical_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISW-style transliteration"
+        },
+        "relation": {
+          "default": "in",
+          "description": "in | near | north_of | ... | between",
+          "type": "string"
+        },
+        "distance_km": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "resolution_confidence": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "gazetteer_id",
+        "canonical_name",
+        "relation",
+        "distance_km",
+        "resolution_confidence"
+      ],
+      "title": "PlaceRef",
+      "type": "object"
+    },
+    "PointGeometry": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "Point",
+          "default": "Point",
+          "type": "string"
+        },
+        "coordinates": {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "coordinates"
+      ],
+      "title": "PointGeometry",
+      "type": "object"
+    },
+    "Status": {
+      "description": "Epistemic status of a single observation — drives line/marker style.",
+      "enum": [
+        "assessed",
+        "geolocated",
+        "claimed",
+        "reported",
+        "denied"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "day": {
+      "type": "integer"
+    },
+    "date": {
+      "type": "string"
+    },
+    "layers": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FeatureCollection"
+      },
+      "description": "layer id -> FeatureCollection; areas, lines and diff polygons",
+      "type": "object"
+    },
+    "observations": {
+      "items": {
+        "$ref": "#/$defs/Observation"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "day",
+    "date",
+    "layers",
+    "observations"
+  ],
+  "title": "DayBundle",
+  "type": "object"
+}
